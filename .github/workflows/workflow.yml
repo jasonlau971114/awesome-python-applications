@@ -1,21 +1,32 @@
 on:
   schedule:
     - cron: "00 9 * * *"
-  push:
+  workflow_dispatch:
 name: Link Checker
 jobs:
   linkchecker:
     name: linkchecker
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - name: linkchecker
-        uses: cam-barts/linkchecker-action@master
-        env:
-          include_files: "README.md"
-      - name: Upload exclusion list as an artifact
+      - uses: actions/checkout@v4
+
+      - name: Restore lychee cache
+        uses: actions/cache@v4
+        with:
+          path: .lycheecache
+          key: cache-lychee-${{ github.sha }}
+          restore-keys: cache-lychee-
+
+      - name: Link Checker
+        id: lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --cache --max-cache-age 3d --no-progress --max-retries 3 --max-concurrency 5 'README.md'
+          fail: true
+
+      - name: Upload link report as an artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: exclude_links.json
-          path: exclude_links.json
+          name: lychee-report
+          path: lychee/out.md
